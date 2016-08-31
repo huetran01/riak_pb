@@ -413,6 +413,7 @@ safe_to_atom(Binary) when is_binary(Binary) ->
 
 -ifdef(TEST).
 -include("riak_kv_pb.hrl").
+-include("riak_dt_pb.hrl").
 
 %% One necessary omission: we do not have any messages today that
 %% include functions, so we cannot test decoding such records.
@@ -423,13 +424,28 @@ decode_eq(Message, IoList, DecodeFun) ->
     decode_eq(Message, iolist_to_binary(IoList), DecodeFun).
 
 record_test() ->
-    Req =
-        #rpbgetreq{n_val=4,
-                   notfound_ok=true,
-                   bucket = <<"bucket">>,
-                   key = <<"key">>},
-
+    Req = #rpbgetreq{n_val=4,
+                     notfound_ok=true,
+                     bucket = <<"bucket">>,
+                     key = <<"key">>},
     decode_eq(Req, encode(Req), fun decode/2).
+
+optional_booleans_test() ->
+    Req = #dtfetchreq{bucket = "bucket",
+                      key = <<"key">>,
+                      type = <<"type">>},
+    DecodedReq = #dtfetchreq{bucket = <<"bucket">>,
+                             key = <<"key">>,
+                             type = <<"type">>,
+                             r = 0,
+                             pr = 0,
+                             basic_quorum = false,
+                             notfound_ok = false,
+                             timeout = 0,
+                             sloppy_quorum = false,
+                             n_val = 0,
+                             include_context = true},
+    decode_eq(DecodedReq, encode(Req), fun decode/2).
 
 empty_atoms_test() ->
     %% Empty messages are either empty records or atoms, depending on
@@ -444,18 +460,14 @@ mixed_strings_test() ->
     %% Because the network layer will invoke iolist_to_binary/1 or its
     %% equivalent, on the sending side we can get away with using
     %% strings instead of binaries in records that expect the latter
-    Req =
-        #rpbgetreq{n_val=4,
-                   notfound_ok=true,
-                   bucket = "bucket",
-                   key = <<"key">>},
-
-    DecodedReq =
-        #rpbgetreq{n_val=4,
-                   notfound_ok=true,
-                   bucket = <<"bucket">>,
-                   key = <<"key">>},
-
+    Req = #rpbgetreq{n_val=4,
+                     notfound_ok=true,
+                     bucket = "bucket",
+                     key = <<"key">>},
+    DecodedReq = #rpbgetreq{n_val=4,
+                            notfound_ok=true,
+                            bucket = <<"bucket">>,
+                            key = <<"key">>},
     decode_eq(DecodedReq, encode(Req), fun decode/2).
 
 -endif. %% TEST
